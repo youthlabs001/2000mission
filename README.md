@@ -16,16 +16,22 @@
 - HTML5
 - CSS3
 - JavaScript (Vanilla)
-- localStorage (데이터 저장)
+- **Supabase** (PostgreSQL 데이터베이스)
+- Supabase JS SDK
 
 ## 시작하기
 
 1. 저장소 클론
 ```bash
 git clone https://github.com/youthlabs001/2000mission.git
+cd 2000mission
 ```
 
-2. `index.html` 파일을 브라우저에서 열기
+2. Supabase 설정 (이미 구성됨)
+   - Supabase URL: `https://tctosvdhlcyehqmbksod.supabase.co`
+   - 데이터베이스 테이블: users, meetings, programs, schedules
+
+3. `index.html` 파일을 브라우저에서 열기
 
 ## 로그인 정보
 

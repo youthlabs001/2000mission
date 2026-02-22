@@ -1,0 +1,3 @@
+// Supabase 설정
+const SUPABASE_URL = 'https://tctosvdhlcyehqmbksod.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjdG9zdmRobGN5ZWhxbWJrc29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTE2MTksImV4cCI6MjA4NzMyNzYxOX0.gY3Euj01aos5YxvdVaaOvEOMLBLHdSxskgFC47qL8Oo';
