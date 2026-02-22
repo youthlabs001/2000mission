@@ -697,7 +697,7 @@
                 <p>아이디: mission / 비밀번호: mission2000</p>
             </div>
 
-            <form id="loginForm" onsubmit="handleLogin(event)">
+            <form id="loginForm" onsubmit="handleLogin(event); return false;">
                 <div class="form-group">
                     <label for="username">아이디</label>
                     <input 
@@ -1086,7 +1086,7 @@
         <div id="addUserModal" class="modal-overlay">
             <div class="modal">
                 <h3>새 사용자 추가</h3>
-                <form id="addUserForm" onsubmit="handleAddUser(event)">
+                <form id="addUserForm" onsubmit="handleAddUser(event); return false;">
                     <div class="form-group">
                         <label for="newUsername">아이디</label>
                         <input 
@@ -1133,7 +1133,7 @@
         <div id="editUserModal" class="modal-overlay">
             <div class="modal">
                 <h3>사용자 정보 수정</h3>
-                <form id="editUserForm" onsubmit="handleEditUser(event)">
+                <form id="editUserForm" onsubmit="handleEditUser(event); return false;">
                     <input type="hidden" id="editUsername">
                     <div class="form-group">
                         <label for="editName">이름</label>
@@ -1174,8 +1174,11 @@
     </div>
 
     <script>
-        // Supabase 클라이언트 초기화
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Supabase 클라이언트 초기화 (중복 방지)
+        if (!window.supabaseClient) {
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        const supabase = window.supabaseClient;
         
         let users = {}; // 캐시용
 
@@ -1290,6 +1293,8 @@
 
         // 페이지 로드 시 로그인 상태 확인
         window.addEventListener('load', function() {
+            // 사용자 데이터 초기화 (최신 비밀번호로)
+            initializeLocalUsers();
             checkLoginStatus();
         });
 
