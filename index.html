@@ -1215,13 +1215,13 @@
             if (!savedUsers) {
                 const defaultUsers = {
                     'admin': {
-                        password: '1234',
+                        password: 'admin1234',
                         name: '관리자',
                         role: 'admin',
                         createdAt: '2024-01-01'
                     },
                     'mission': {
-                        password: '2000',
+                        password: 'mission2000',
                         name: '선교팀',
                         role: 'user',
                         createdAt: '2024-01-01'
@@ -1231,6 +1231,11 @@
                 return defaultUsers;
             }
             return JSON.parse(savedUsers);
+        }
+        
+        // localStorage에 사용자 저장
+        function saveUsersToLocal(users) {
+            localStorage.setItem('users', JSON.stringify(users));
         }
 
         // 사용자 추가 (Supabase)
@@ -1306,7 +1311,6 @@
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('errorMessage');
             
             // 입력값 검증
             if (!username || !password) {
@@ -1315,8 +1319,22 @@
             }
             
             try {
-                // Supabase에서 최신 사용자 데이터 가져오기
-                users = await getUsers();
+                // 먼저 localStorage에서 시도
+                users = initializeLocalUsers();
+                console.log('로그인 시도:', username);
+                console.log('사용 가능한 사용자:', Object.keys(users));
+                
+                // Supabase에서도 시도 (백그라운드)
+                try {
+                    const supabaseUsers = await getUsers();
+                    if (supabaseUsers && Object.keys(supabaseUsers).length > 0) {
+                        users = supabaseUsers;
+                        saveUsersToLocal(supabaseUsers);
+                        console.log('✅ Supabase 연결 성공');
+                    }
+                } catch (supabaseError) {
+                    console.warn('⚠️ Supabase 연결 실패, localStorage 사용:', supabaseError);
+                }
                 
                 // 사용자 인증
                 if (users[username] && users[username].password === password) {
@@ -1336,12 +1354,15 @@
                     
                     // 폼 초기화
                     document.getElementById('loginForm').reset();
+                    
+                    console.log('✅ 로그인 성공:', userData.name);
                 } else {
+                    console.error('❌ 인증 실패:', username);
                     showError('아이디 또는 비밀번호가 올바르지 않습니다.');
                 }
             } catch (error) {
-                console.error('로그인 오류:', error);
-                showError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+                console.error('❌ 로그인 오류:', error);
+                showError('로그인 중 오류가 발생했습니다. 콘솔을 확인하세요.');
             }
         }
 
