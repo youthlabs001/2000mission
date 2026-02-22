@@ -5,17 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2000 이천 단기선교 - 준비 및 관리</title>
     
-    <!-- Supabase JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Supabase 설정 -->
-    <script>
-        // Supabase 설정
-        // 프로젝트 ID: gclbezggtizhasokqdpg
-        // 프로젝트명: 2000mission
-        const SUPABASE_URL = 'https://gclbezggtizhasokqdpg.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjbGJlemdndGl6aGFzb2txZHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTA4ODQsImV4cCI6MjA4NzMyNjg4NH0.BtbhUQri4SunZZPmbiIQR7PrRnGjThAw9lw5b_t8mf8';
-    </script>
+    <!-- localStorage 기반 인증 시스템 -->
     
     <style>
         * {
@@ -1174,46 +1164,11 @@
     </div>
 
     <script>
-        // Supabase 클라이언트 초기화 (중복 방지)
-        if (!window.supabaseClient) {
-            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        }
-        const supabase = window.supabaseClient;
-        
-        let users = {}; // 캐시용
+        // localStorage 기반 사용자 관리
+        let users = {};
 
-        // 사용자 데이터 가져오기 (Supabase)
-        async function getUsers() {
-            try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('*');
-                
-                if (error) throw error;
-                
-                // 배열을 객체로 변환
-                const usersObj = {};
-                data.forEach(user => {
-                    usersObj[user.username] = {
-                        name: user.name,
-                        password: user.password,
-                        role: user.role,
-                        createdAt: user.created_at.split('T')[0],
-                        id: user.id
-                    };
-                });
-                
-                users = usersObj;
-                return usersObj;
-            } catch (error) {
-                console.error('사용자 데이터 가져오기 오류:', error);
-                // 에러 발생 시 localStorage 폴백
-                return initializeLocalUsers();
-            }
-        }
-
-        // localStorage 폴백
-        function initializeLocalUsers() {
+        // 사용자 데이터 초기화 및 가져오기
+        function getUsers() {
             const savedUsers = localStorage.getItem('users');
             if (!savedUsers) {
                 const defaultUsers = {
@@ -1231,70 +1186,55 @@
                     }
                 };
                 localStorage.setItem('users', JSON.stringify(defaultUsers));
+                users = defaultUsers;
                 return defaultUsers;
             }
-            return JSON.parse(savedUsers);
+            users = JSON.parse(savedUsers);
+            return users;
         }
         
-        // localStorage에 사용자 저장
-        function saveUsersToLocal(users) {
-            localStorage.setItem('users', JSON.stringify(users));
+        // 사용자 저장
+        function saveUsers(usersData) {
+            localStorage.setItem('users', JSON.stringify(usersData));
+            users = usersData;
         }
 
-        // 사용자 추가 (Supabase)
-        async function addUserToSupabase(username, name, password, role) {
-            try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .insert([
-                        { username, name, password, role }
-                    ])
-                    .select();
-                
-                if (error) throw error;
-                return data;
-            } catch (error) {
-                console.error('사용자 추가 오류:', error);
-                throw error;
+        // 사용자 추가
+        function addUser(username, name, password, role) {
+            const currentUsers = getUsers();
+            currentUsers[username] = {
+                name: name,
+                password: password,
+                role: role,
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+            saveUsers(currentUsers);
+            return currentUsers[username];
+        }
+
+        // 사용자 수정
+        function updateUser(username, updates) {
+            const currentUsers = getUsers();
+            if (currentUsers[username]) {
+                Object.assign(currentUsers[username], updates);
+                saveUsers(currentUsers);
+                return currentUsers[username];
             }
+            return null;
         }
 
-        // 사용자 수정 (Supabase)
-        async function updateUserInSupabase(username, updates) {
-            try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .update(updates)
-                    .eq('username', username)
-                    .select();
-                
-                if (error) throw error;
-                return data;
-            } catch (error) {
-                console.error('사용자 수정 오류:', error);
-                throw error;
-            }
+        // 사용자 삭제
+        function deleteUser(username) {
+            const currentUsers = getUsers();
+            delete currentUsers[username];
+            saveUsers(currentUsers);
         }
 
-        // 사용자 삭제 (Supabase)
-        async function deleteUserFromSupabase(username) {
-            try {
-                const { error } = await supabase
-                    .from('users')
-                    .delete()
-                    .eq('username', username);
-                
-                if (error) throw error;
-            } catch (error) {
-                console.error('사용자 삭제 오류:', error);
-                throw error;
-            }
-        }
-
-        // 페이지 로드 시 로그인 상태 확인
+        // 페이지 로드 시 초기화
         window.addEventListener('load', function() {
-            // 사용자 데이터 초기화 (최신 비밀번호로)
-            initializeLocalUsers();
+            console.log('=== 페이지 로드 ===');
+            // 사용자 데이터 초기화
+            getUsers();
             checkLoginStatus();
         });
 
@@ -1311,64 +1251,61 @@
         }
 
         // 로그인 처리
-        async function handleLogin(event) {
+        function handleLogin(event) {
             event.preventDefault();
             
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            
+            console.log('=== 로그인 시작 ===');
+            console.log('입력된 아이디:', username);
             
             // 입력값 검증
             if (!username || !password) {
                 showError('아이디와 비밀번호를 모두 입력해주세요.');
-                return;
+                return false;
             }
             
-            try {
-                // 먼저 localStorage에서 시도
-                users = initializeLocalUsers();
-                console.log('로그인 시도:', username);
-                console.log('사용 가능한 사용자:', Object.keys(users));
+            // 사용자 데이터 가져오기
+            const allUsers = getUsers();
+            console.log('저장된 사용자 목록:', Object.keys(allUsers));
+            console.log('각 사용자 비밀번호:', Object.keys(allUsers).map(u => `${u}: ${allUsers[u].password}`));
+            
+            // 사용자 인증
+            if (allUsers[username]) {
+                console.log('사용자 찾음:', username);
+                console.log('저장된 비밀번호:', allUsers[username].password);
+                console.log('입력한 비밀번호:', password);
+                console.log('비밀번호 일치:', allUsers[username].password === password);
                 
-                // Supabase에서도 시도 (백그라운드)
-                try {
-                    const supabaseUsers = await getUsers();
-                    if (supabaseUsers && Object.keys(supabaseUsers).length > 0) {
-                        users = supabaseUsers;
-                        saveUsersToLocal(supabaseUsers);
-                        console.log('✅ Supabase 연결 성공');
-                    }
-                } catch (supabaseError) {
-                    console.warn('⚠️ Supabase 연결 실패, localStorage 사용:', supabaseError);
-                }
-                
-                // 사용자 인증
-                if (users[username] && users[username].password === password) {
+                if (allUsers[username].password === password) {
                     const userData = {
                         username: username,
-                        name: users[username].name,
-                        role: users[username].role || 'user',
+                        name: allUsers[username].name,
+                        role: allUsers[username].role || 'user',
                         loginTime: new Date().toISOString()
                     };
                     
-                    // localStorage에 저장
+                    // 로그인 정보 저장
                     localStorage.setItem('currentUser', JSON.stringify(userData));
                     
                     // 로그인 성공
+                    console.log('✅ 로그인 성공:', userData.name);
                     hideError();
                     showMainContent(userData);
                     
                     // 폼 초기화
                     document.getElementById('loginForm').reset();
-                    
-                    console.log('✅ 로그인 성공:', userData.name);
                 } else {
-                    console.error('❌ 인증 실패:', username);
+                    console.error('❌ 비밀번호 불일치');
                     showError('아이디 또는 비밀번호가 올바르지 않습니다.');
                 }
-            } catch (error) {
-                console.error('❌ 로그인 오류:', error);
-                showError('로그인 중 오류가 발생했습니다. 콘솔을 확인하세요.');
+            } else {
+                console.error('❌ 사용자 없음:', username);
+                showError('아이디 또는 비밀번호가 올바르지 않습니다.');
             }
+            
+            return false;
         }
 
         // 로그아웃 처리
@@ -1433,46 +1370,35 @@
             document.getElementById(tabName).classList.add('active');
         }
 
-        // Enter 키로 로그인
-        document.addEventListener('DOMContentLoaded', function() {
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', handleLogin);
-            }
-        });
 
         // ===== 관리자 페이지 기능 =====
 
         // 사용자 테이블 로드
-        async function loadUserTable() {
-            try {
-                users = await getUsers();
-                const tbody = document.getElementById('userTableBody');
-                tbody.innerHTML = '';
+        function loadUserTable() {
+            const allUsers = getUsers();
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            
+            Object.keys(allUsers).forEach(username => {
+                const user = allUsers[username];
+                const tr = document.createElement('tr');
                 
-                Object.keys(users).forEach(username => {
-                    const user = users[username];
-                    const tr = document.createElement('tr');
-                    
-                    const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
-                    const roleText = user.role === 'admin' ? '관리자' : '일반 사용자';
-                    
-                    tr.innerHTML = `
-                        <td><strong>${username}</strong></td>
-                        <td>${user.name}</td>
-                        <td><span class="role-badge ${roleClass}">${roleText}</span></td>
-                        <td>${user.createdAt || '2024-01-01'}</td>
-                        <td>
-                            <button class="action-btn btn-edit" onclick="openEditUserModal('${username}')">수정</button>
-                            <button class="action-btn btn-delete" onclick="deleteUser('${username}')">삭제</button>
-                        </td>
-                    `;
-                    
-                    tbody.appendChild(tr);
-                });
-            } catch (error) {
-                console.error('사용자 테이블 로드 오류:', error);
-            }
+                const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
+                const roleText = user.role === 'admin' ? '관리자' : '일반 사용자';
+                
+                tr.innerHTML = `
+                    <td><strong>${username}</strong></td>
+                    <td>${user.name}</td>
+                    <td><span class="role-badge ${roleClass}">${roleText}</span></td>
+                    <td>${user.createdAt || '2024-01-01'}</td>
+                    <td>
+                        <button class="action-btn btn-edit" onclick="openEditUserModal('${username}')">수정</button>
+                        <button class="action-btn btn-delete" onclick="handleDeleteUser('${username}')">삭제</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
         }
 
         // 새 사용자 추가 모달 열기
@@ -1487,7 +1413,7 @@
         }
 
         // 사용자 추가 처리
-        async function handleAddUser(event) {
+        function handleAddUser(event) {
             event.preventDefault();
             
             const username = document.getElementById('newUsername').value.trim();
@@ -1495,43 +1421,36 @@
             const password = document.getElementById('newPassword').value;
             const role = document.getElementById('newRole').value;
             
-            try {
-                users = await getUsers();
-                
-                // 중복 확인
-                if (users[username]) {
-                    alert('이미 존재하는 아이디입니다.');
-                    return;
-                }
-                
-                // Supabase에 새 사용자 추가
-                await addUserToSupabase(username, name, password, role);
-                
-                // 테이블 다시 로드
-                await loadUserTable();
-                closeAddUserModal();
-                showSuccessMessage('사용자가 성공적으로 추가되었습니다.');
-            } catch (error) {
-                console.error('사용자 추가 오류:', error);
-                alert('사용자 추가 중 오류가 발생했습니다.');
+            const allUsers = getUsers();
+            
+            // 중복 확인
+            if (allUsers[username]) {
+                alert('이미 존재하는 아이디입니다.');
+                return false;
             }
+            
+            // 사용자 추가
+            addUser(username, name, password, role);
+            
+            // 테이블 다시 로드
+            loadUserTable();
+            closeAddUserModal();
+            showSuccessMessage('사용자가 성공적으로 추가되었습니다.');
+            
+            return false;
         }
 
         // 사용자 수정 모달 열기
-        async function openEditUserModal(username) {
-            try {
-                users = await getUsers();
-                const user = users[username];
-                
-                document.getElementById('editUsername').value = username;
-                document.getElementById('editName').value = user.name;
-                document.getElementById('editPassword').value = '';
-                document.getElementById('editRole').value = user.role || 'user';
-                
-                document.getElementById('editUserModal').style.display = 'flex';
-            } catch (error) {
-                console.error('사용자 정보 로드 오류:', error);
-            }
+        function openEditUserModal(username) {
+            const allUsers = getUsers();
+            const user = allUsers[username];
+            
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editName').value = user.name;
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editRole').value = user.role || 'user';
+            
+            document.getElementById('editUserModal').style.display = 'flex';
         }
 
         // 사용자 수정 모달 닫기
@@ -1540,7 +1459,7 @@
         }
 
         // 사용자 수정 처리
-        async function handleEditUser(event) {
+        function handleEditUser(event) {
             event.preventDefault();
             
             const username = document.getElementById('editUsername').value;
@@ -1548,29 +1467,26 @@
             const password = document.getElementById('editPassword').value;
             const role = document.getElementById('editRole').value;
             
-            try {
-                // 사용자 정보 업데이트
-                const updates = { name, role };
-                
-                // 비밀번호가 입력된 경우에만 변경
-                if (password) {
-                    updates.password = password;
-                }
-                
-                await updateUserInSupabase(username, updates);
-                
-                // 테이블 다시 로드
-                await loadUserTable();
-                closeEditUserModal();
-                showSuccessMessage('사용자 정보가 성공적으로 수정되었습니다.');
-            } catch (error) {
-                console.error('사용자 수정 오류:', error);
-                alert('사용자 정보 수정 중 오류가 발생했습니다.');
+            // 사용자 정보 업데이트
+            const updates = { name, role };
+            
+            // 비밀번호가 입력된 경우에만 변경
+            if (password) {
+                updates.password = password;
             }
+            
+            updateUser(username, updates);
+            
+            // 테이블 다시 로드
+            loadUserTable();
+            closeEditUserModal();
+            showSuccessMessage('사용자 정보가 성공적으로 수정되었습니다.');
+            
+            return false;
         }
 
         // 사용자 삭제
-        async function deleteUser(username) {
+        function handleDeleteUser(username) {
             // 현재 로그인한 사용자 확인
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             
@@ -1580,14 +1496,9 @@
             }
             
             if (confirm(`정말 "${username}" 계정을 삭제하시겠습니까?`)) {
-                try {
-                    await deleteUserFromSupabase(username);
-                    await loadUserTable();
-                    showSuccessMessage('사용자가 성공적으로 삭제되었습니다.');
-                } catch (error) {
-                    console.error('사용자 삭제 오류:', error);
-                    alert('사용자 삭제 중 오류가 발생했습니다.');
-                }
+                deleteUser(username);
+                loadUserTable();
+                showSuccessMessage('사용자가 성공적으로 삭제되었습니다.');
             }
         }
 
