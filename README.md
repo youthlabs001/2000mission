@@ -28,8 +28,12 @@ cd 2000mission
 ```
 
 2. Supabase 설정 (이미 구성됨)
-   - Supabase URL: `https://tctosvdhlcyehqmbksod.supabase.co`
+   - 프로젝트 ID: `gclbezggtizhasokqdpg`
+   - 프로젝트명: 2000mission
+   - Supabase URL: `https://gclbezggtizhasokqdpg.supabase.co`
    - 데이터베이스 테이블: users, meetings, programs, schedules
+   
+   **중요**: `supabase_setup.sql` 파일을 Supabase SQL Editor에서 실행하여 테이블을 생성하세요
 
 3. `index.html` 파일을 브라우저에서 열기
 
